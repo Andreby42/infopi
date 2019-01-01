@@ -29,17 +29,17 @@ th{overflow:hidden;white-space:nowrap}
 		<td width="18%">{{entry.author}}</td>	
 		<td>
 {%- if entry.summary and entry.url -%}
-<span class="s">s</span> <a href="{{entry.url}}" target="_blank" onmouseover="Tip('{{entry.summary}}')" onmouseout="UnTip()">{{entry.title}}</a>
+<span class="s">s</span> <a href="{{entry.url}}" target="_blank" onmouseover="Tip('{{entry.summary.replace("'", "\\'")}}')" onmouseout="UnTip()">{{entry.title}}</a>
 {%- elif not entry.summary and entry.url -%}
 <a href="{{entry.url}}" target="_blank">{{entry.title}}</a>
 {%- elif entry.summary and not entry.url -%}
-<span class="s">s</span> <span onmouseover="Tip('{{entry.summary}}')" onmouseout="UnTip()">{{entry.title}}</span>
+<span class="s">s</span> <span onmouseover="Tip('{{entry.summary.replace("'", "\\'")}}')" onmouseout="UnTip()">{{entry.title}}</span>
 {%- else -%}
 {{entry.title}}
 {%- endif -%}
 		</td>
 {%- if entry.pub_date -%}
-<td class="nb" onmouseover="Tip('{{entry.pub_date}}')" onmouseout="UnTip()"><span class="p">p</span>{{entry.fetch_date}}</td>
+<td class="nb" onmouseover="Tip('{{entry.pub_date.replace("'", "\\'")}}')" onmouseout="UnTip()"><span class="p">p</span>{{entry.fetch_date}}</td>
 {%- else -%}
 <td class="nb">&nbsp;&nbsp;{{entry.fetch_date}}</td>
 {%- endif -%}

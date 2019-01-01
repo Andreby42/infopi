@@ -12,12 +12,7 @@ from red import *
 
 def for_wz(s):
     # translate for wz_tooltip.js (web tooltip)
-    # 1st line: for html code
-    # 2nd line: no line break
-    #           replace("'", '"') this rely on html templates
-
-    return s.replace('<', '[').replace('>', ']').replace("'", '"').\
-        replace('\n', '').replace('\r', '')
+    return s.replace('\n', '').replace('\r', '')
 
 # for funcs.datetime()
 dt_namedtuple = collections.namedtuple('dt', ('year', 'mon', 'day',
@@ -284,7 +279,7 @@ def worker_starter(runcfg, source_id):
                 if len(i.pub_date) > runcfg.pub_date_len:
                     i.pub_date = i.pub_date[:runcfg.pub_date_len - 3] + '...'
 
-                # for html show
+                # for tooltip show
                 global for_wz
                 i.summary = for_wz(i.summary)
                 i.pub_date = for_wz(i.pub_date)
