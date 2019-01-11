@@ -122,7 +122,11 @@ def load_xml(sources_path, path, filename, test_sid):
 
     callback = get_text_from_tag(xml.find('callback'))
     if callback != '':
-        s.callback = compile(callback, '<string>', 'exec')
+        try:
+            s.callback = compile(callback, '<string>', 'exec')
+        except:
+            print('编译信息源%s的callback代码失败' % s.source_id)
+            raise
 
     list_callback = get_text_from_tag(xml.find('list_callback'))
     if list_callback != '':
@@ -232,8 +236,11 @@ def load_sources(test_sid=None):
             for l2_item in os.listdir(l1_path):
                 l2_path = os.path.join(l1_path, l2_item)
                 if os.path.isfile(l2_path):
-                    load_xml(sources_path, l1_item, l2_item,
-                             test_sid)
+                    try:
+                        load_xml(sources_path, l1_item, l2_item,
+                                 test_sid)
+                    except:
+                        pass
 
     print('back-side loaded %d sources' % len(sources))
 
