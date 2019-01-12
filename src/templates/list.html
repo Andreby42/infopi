@@ -42,7 +42,7 @@ table{border-spacing:1px}
 {%- endif -%}
 	</td>
 {%- if entry.pub_date -%}
-<td {% if entry.temp == 1 %}class="h8"{% elif entry.temp == 2 %}class="d1"{% else %}class="nb"{% endif %} tooltip="{{entry.pub_date}}"><span class="p">p</span>{{entry.fetch_date}}</td>
+<td {% if entry.temp == 1 %}class="h8"{% elif entry.temp == 2 %}class="d1"{% else %}class="nb"{% endif %} pub_date="{{entry.pub_date}}"><span class="p">p</span>{{entry.fetch_date}}</td>
 {%- else -%}
 <td {% if entry.temp == 1 %}class="h8"{% elif entry.temp == 2 %}class="d1"{% else %}class="nb"{% endif %}>&nbsp;&nbsp;{{entry.fetch_date}}</td>
 {%- endif -%}

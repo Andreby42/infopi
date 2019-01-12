@@ -43,7 +43,7 @@ th{overflow:hidden;white-space:nowrap}
 {%- endif -%}
 		</td>
 {%- if entry.pub_date -%}
-<td class="nb" tooltip="{{entry.pub_date}}"><span class="p">p</span>{{entry.fetch_date}}</td>
+<td class="nb" pub_date="{{entry.pub_date}}"><span class="p">p</span>{{entry.fetch_date}}</td>
 {%- else -%}
 <td class="nb">&nbsp;&nbsp;{{entry.fetch_date}}</td>
 {%- endif -%}

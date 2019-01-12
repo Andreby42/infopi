@@ -8,12 +8,26 @@
     padding: 10px;
     color: #FFFFEF;
     font-size: 17px;
-    border-radius: 6px;
     pointer-events: none;
     max-width: 400px;
     background: #822D2C;
 }
-[tooltip]:hover:before {
+[pub_date]:before {
+    /* needed - do not touch */
+    content: attr(pub_date);
+    position: absolute;
+    right: 0%;
+    opacity: 0;
+    /* customizable */
+    transition-delay: 120ms;
+    padding: 10px;
+    color: #FFFFEF;
+    font-size: 17px;
+    pointer-events: none;
+    max-width: 400px;
+    background: #822D2C;
+}
+[tooltip]:hover:before,[pub_date]:hover:before {
     /* needed - do not touch */
     opacity: 1;
 }
