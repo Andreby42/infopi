@@ -357,12 +357,17 @@ def test_source(source_id):
         if source.data is None:
             raise Exception('信息源%s的data未能被解析' % source.source_id)
 
+        if type(source.callback) is str:
+            raise Exception('信息源%s的callback代码编译失败' % source.source_id)
+
+        if type(source.list_callback) is str:
+            raise Exception('信息源%s的list_callback代码编译失败' % source.source_id)
+
         lst = worker(source.data, worker_dict)
 
     except Exception as e:
         print('\n    源%s出现异常:\n' % source.source_id)
-
-        raise e
+        raise
 
     else:
         # max length of info list
@@ -386,9 +391,9 @@ def test_source(source_id):
                 try:
                     exec(source.callback, None, local_d)
                 except Exception as e:
-                    print('callback异常:', e)
-                    info.title = 'callback代码异常'
-                    info.summary = str(e)
+                    print('callback代码运行异常:', e)
+                    print()
+                    raise
 
                 if info.temp != 'del':
                     newlst.append(info)
@@ -477,9 +482,8 @@ def parse_data(worker_id, xml_string):
 # params: (data_dict, worker_dict)
 # return: list(info) or c_worker_exception
 
+
 # worker decorator
-
-
 def worker(worker_id):
 
     def worker_decorator(func):
@@ -496,9 +500,8 @@ def worker(worker_id):
 # params: (xml_string)
 # return: data_dict
 
+
 # data-parser decorator
-
-
 def dataparser(worker_id):
 
     def dataparser_decorator(func):
