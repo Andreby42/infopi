@@ -167,7 +167,8 @@ def worker_wrapper(runcfg,
                     exec(source.callback, None, local_d)
                 except Exception as e:
                     print('callback代码运行异常:', e)
-                    raise c_worker_exception('callback代码运行异常', '',
+                    raise c_worker_exception('第%d个元素的callback代码运行异常' % (i+1),
+                                             '',
                                              str(e))
 
                 if info.temp != 'del':
@@ -195,12 +196,12 @@ def worker_wrapper(runcfg,
                                          '',
                                          '实际返回类型:%s' % str(type(lst)))
 
-            for i in lst:
-                if not isinstance(i, c_info):
+            for i, info in enumerate(lst):
+                if not isinstance(info, c_info):
                     raise c_worker_exception(
-                        'list_callback返回的列表元素不是一条信息(c_info)',
+                        'list_callback返回列表的第%d个元素不是一条信息(c_info)' % (i+1),
                         '',
-                        '实际元素类型:%s' % str(type(i)))
+                        '实际元素类型:%s' % str(type(info)))
 
         # remove duplicate suid, only keep the first one
         # (escape special suid inside this code)
@@ -392,7 +393,7 @@ def test_source(source_id):
                     exec(source.callback, None, local_d)
                 except Exception as e:
                     print('callback代码运行异常:', e)
-                    print()
+                    print('第%d个元素的callback代码运行异常' % (i+1))
                     raise
 
                 if info.temp != 'del':
@@ -412,11 +413,12 @@ def test_source(source_id):
                 lst = local_d['infos']
 
                 if not isinstance(lst, (list, tuple)):
-                    raise Exception('infos的类型应为list')
+                    raise Exception('infos的类型应为list，实际类型:' + str(type(lst)))
 
-                for i in lst:
-                    if not isinstance(i, c_info):
-                        raise Exception('列表的元素不是一条信息(c_info)')
+                for i, info in enumerate(lst):
+                    if not isinstance(info, c_info):
+                        print('list_callback返回列表的第%d个元素不是一条信息(c_info)' % (i+1))
+                        raise Exception('列表的元素不是一条信息(c_info)，实际类型:' + str(type(info)))
             except Exception as e:
                 print('list_callback异常:', e)
                 print()
