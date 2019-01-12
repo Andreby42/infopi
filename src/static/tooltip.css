@@ -1,0 +1,19 @@
+[tooltip]:before {
+    /* needed - do not touch */
+    content: attr(tooltip);
+    position: absolute;
+    opacity: 0;
+    /* customizable */
+    transition-delay: 120ms;
+    padding: 10px;
+    color: #FFFFEF;
+    font-size: 17px;
+    border-radius: 6px;
+    pointer-events: none;
+    max-width: 400px;
+    background: #822D2C;
+}
+[tooltip]:hover:before {
+    /* needed - do not touch */
+    opacity: 1;
+}

@@ -1,6 +1,7 @@
 <!DOCTYPE html><html>
 <head>
 <meta charset="UTF-8">
+<link rel="stylesheet" type="text/css" href="/static/tooltip.css">
 <style>
 a{TEXT-DECORATION:none}
 th{overflow:hidden;white-space:nowrap}
@@ -10,7 +11,6 @@ th{overflow:hidden;white-space:nowrap}
 .nb{white-space:nowrap}
 </style></head>
 <body bgcolor="#ccccff">
-	<script type="text/javascript" src="/static/wz_tooltip.js"></script>
 {%- if type == 2 %}
 所有用户的异常信息：<br>
 <form action="/panel" method="post" enctype="multipart/form-data">
@@ -27,23 +27,23 @@ th{overflow:hidden;white-space:nowrap}
 {%- for entry in entries %}
 	<tr>
 {%- if type == 2 -%}
-<td width="18%"><span onmouseover="Tip('{{entry.source_id.replace("'", "\\'")}}')" onmouseout="UnTip()">{{entry.author}}</span></td>
+<td width="18%"><span tooltip="{{entry.source_id}}">{{entry.author}}</span></td>
 {%- else -%}
 <td width="18%">{{entry.author}}</td>
 {%- endif -%}
 		<td>
 {%- if entry.summary and entry.url -%}
-<span class="s">s</span> <a href="{{entry.url}}" target="_blank" onmouseover="Tip('{{entry.summary.replace("'", "\\'")}}')" onmouseout="UnTip()">{{entry.title}}</a>
+<span class="s">s</span> <a href="{{entry.url}}" target="_blank" tooltip="{{entry.summary}}">{{entry.title}}</a>
 {%- elif not entry.summary and entry.url -%}
 <a href="{{entry.url}}" target="_blank">{{entry.title}}</a>
 {%- elif entry.summary and not entry.url -%}
-<span class="s">s</span> <span onmouseover="Tip('{{entry.summary.replace("'", "\\'")}}')" onmouseout="UnTip()">{{entry.title}}</span>
+<span class="s">s</span> <span tooltip="{{entry.summary}}">{{entry.title}}</span>
 {%- else -%}
 {{entry.title}}
 {%- endif -%}
 		</td>
 {%- if entry.pub_date -%}
-<td class="nb" onmouseover="Tip('{{entry.pub_date.replace("'", "\\'")}}')" onmouseout="UnTip()"><span class="p">p</span>{{entry.fetch_date}}</td>
+<td class="nb" tooltip="{{entry.pub_date}}"><span class="p">p</span>{{entry.fetch_date}}</td>
 {%- else -%}
 <td class="nb">&nbsp;&nbsp;{{entry.fetch_date}}</td>
 {%- endif -%}

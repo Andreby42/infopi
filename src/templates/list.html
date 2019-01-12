@@ -1,6 +1,7 @@
 <!DOCTYPE html><html><head>
 	<meta charset="UTF-8">
 	<title>{{listname}}</title>
+	<link rel="stylesheet" type="text/css" href="/static/tooltip.css">
 	<style>
 a{TEXT-DECORATION:none}
 table{border-spacing:1px}
@@ -14,7 +15,6 @@ table{border-spacing:1px}
 </head>
 
 <body bgcolor="#FFCC99">
-<script type="text/javascript" src="/static/wz_tooltip.js"></script> 
 <span style="float:left"><b>{{listname}}</b>，共有{{count}}条数据。</span>
 <span style="float:right">{{htmlpage|safe}}</span><br>
 <table bgcolor="#ccffcc" width="100%">
@@ -32,17 +32,17 @@ table{border-spacing:1px}
 {%- if not entry.summary %} {% endif -%}
 {%- endif -%}
 {%- if entry.summary and entry.url -%}
-<span class="s">s</span> <a href="{{entry.url}}" target="_blank" onmouseover="Tip('{{entry.summary.replace("'", "\\'")}}')" onmouseout="UnTip()">{{entry.title}}</a>
+<span class="s">s</span> <a href="{{entry.url}}" target="_blank" tooltip="{{entry.summary}}">{{entry.title}}</a>
 {%- elif not entry.summary and entry.url -%}
 <a href="{{entry.url}}" target="_blank">{{entry.title}}</a>
 {%- elif entry.summary and not entry.url -%}
-<span class="s">s</span> <span onmouseover="Tip('{{entry.summary.replace("'", "\\'")}}')" onmouseout="UnTip()">{{entry.title}}</span>
+<span class="s">s</span> <span tooltip="{{entry.summary}}">{{entry.title}}</span>
 {%- else -%}
 {{entry.title}}
 {%- endif -%}
 	</td>
 {%- if entry.pub_date -%}
-<td {% if entry.temp == 1 %}class="h8"{% elif entry.temp == 2 %}class="d1"{% else %}class="nb"{% endif %} onmouseover="Tip('{{entry.pub_date.replace("'", "\\'")}}')" onmouseout="UnTip()"><span class="p">p</span>{{entry.fetch_date}}</td>
+<td {% if entry.temp == 1 %}class="h8"{% elif entry.temp == 2 %}class="d1"{% else %}class="nb"{% endif %} tooltip="{{entry.pub_date}}"><span class="p">p</span>{{entry.fetch_date}}</td>
 {%- else -%}
 <td {% if entry.temp == 1 %}class="h8"{% elif entry.temp == 2 %}class="d1"{% else %}class="nb"{% endif %}>&nbsp;&nbsp;{{entry.fetch_date}}</td>
 {%- endif -%}
