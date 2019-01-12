@@ -107,213 +107,212 @@ class c_worker_exception(Exception):
         return s
 
 
-# 启动worker线程
-def worker_starter(runcfg, source_id):
+# 处理worker的返回结果
+def worker_wrapper(runcfg,
+                   worker, source, worker_dict,
+                   back_web_queue, bb_queue,
+                   cfg_token):
+    # print('线程开始：%s' % source.source_id)
+    int_time = int(time.time())
 
-    def worker_wrapper(runcfg,
-                       worker, source, worker_dict,
-                       back_web_queue, bb_queue,
-                       cfg_token):
+    try:
+        # 信息源定义异常
+        if worker is None:
+            s = '信息源%s没有找到指定worker: %s' % \
+                (source.source_id, source.worker_id)
+            print(s)
+            raise c_worker_exception(s)
 
-        # print('线程开始：%s' % source.source_id)
+        if source.data is None:
+            s = '信息源%s的data未能被解析' % source.source_id
+            print(s)
+            raise c_worker_exception(s)
 
-        int_time = int(time.time())
+        if type(source.callback) is str:
+            s = '信息源%s的callback代码编译失败' % source.source_id
+            print(s)
+            raise c_worker_exception('编译callback代码失败', '',
+                                     source.callback)
 
-        try:
-            # 信息源定义异常
-            if worker is None:
-                s = '信息源%s没有找到指定worker: %s' % \
-                    (source.source_id, source.worker_id)
-                print(s)
-                raise c_worker_exception(s)
+        if type(source.list_callback) is str:
+            s = '信息源%s的list_callback代码编译失败' % source.source_id
+            print(s)
+            raise c_worker_exception('编译list_callback代码失败', '',
+                                     source.list_callback)
 
-            if source.data is None:
-                s = '信息源%s的data未能被解析' % source.source_id
-                print(s)
-                raise c_worker_exception(s)
+        # run worker
+        lst = worker(source.data, worker_dict)
 
-            if type(source.callback) is str:
-                s = '信息源%s的callback代码编译失败' % source.source_id
-                print(s)
-                raise c_worker_exception('编译callback代码失败', '',
-                                         source.callback)
+        # max length of info list
+        if source.max_len is not None:
+            if len(lst) > source.max_len:
+                lst = lst[:source.max_len]
+        elif len(lst) > runcfg.max_entries:
+            lst = lst[:runcfg.max_entries]
 
-            if type(source.list_callback) is str:
-                s = '信息源%s的list_callback代码编译失败' % source.source_id
-                print(s)
-                raise c_worker_exception('编译list_callback代码失败', '',
-                                         source.list_callback)
-
-            # run worker
-            lst = worker(source.data, worker_dict)
-
-            # max length of info list
-            if source.max_len is not None:
-                if len(lst) > source.max_len:
-                    lst = lst[:source.max_len]
-            elif len(lst) > runcfg.max_entries:
-                lst = lst[:runcfg.max_entries]
-
-            global funcs
-            # callback函数
-            if source.callback is not None:
-                newlst = list()
-                local_d = dict()
-
-                local_d['funcs'] = funcs
-                local_d['hasher'] = funcs.hasher
-                local_d['unixtime'] = funcs.unixtime
-
-                for i, info in enumerate(lst):
-                    local_d['posi'] = i
-                    local_d['info'] = info
-                    try:
-                        exec(source.callback, None, local_d)
-                    except Exception as e:
-                        print('callback代码运行异常:', e)
-                        raise c_worker_exception('callback代码运行异常', '',
-                                                 str(e))
-
-                    if info.temp != 'del':
-                        newlst.append(info)
-
-                lst = newlst
-
-            # list_callback函数
-            if source.list_callback is not None:
-                local_d = dict()
-
-                local_d['funcs'] = funcs
-                local_d['infos'] = lst
-
-                try:
-                    exec(source.list_callback, None, local_d)
-                except Exception as e:
-                    print('list_callback代码运行异常:', e)
-                    raise c_worker_exception('list_callback代码运行异常', '',
-                                             str(e))
-                lst = local_d['infos']
-
-                if not isinstance(lst, (list, tuple)):
-                    raise c_worker_exception('list_callback的返回类型应为list',
-                                             '',
-                                             '实际返回类型:%s' % str(type(lst)))
-
-                for i in lst:
-                    if not isinstance(i, c_info):
-                        raise c_worker_exception(
-                            'list_callback返回的列表元素不是一条信息(c_info)',
-                            '',
-                            '实际元素类型:%s' % str(type(i)))
-
-            # remove duplicate suid, only keep the first one
-            # (escape special suid inside this code)
-            suid_set = set()
+        global funcs
+        # callback函数
+        if source.callback is not None:
             newlst = list()
-            for one in lst:
-                # escape special suid
-                if one.suid == '<exception>':
-                    one.suid = '#<exception>#'
+            local_d = dict()
 
-                if one.suid not in suid_set:
-                    suid_set.add(one.suid)
-                    newlst.append(one)
+            local_d['funcs'] = funcs
+            local_d['hasher'] = funcs.hasher
+            local_d['unixtime'] = funcs.unixtime
+
+            for i, info in enumerate(lst):
+                local_d['posi'] = i
+                local_d['info'] = info
+                try:
+                    exec(source.callback, None, local_d)
+                except Exception as e:
+                    print('callback代码运行异常:', e)
+                    raise c_worker_exception('callback代码运行异常', '',
+                                             str(e))
+
+                if info.temp != 'del':
+                    newlst.append(info)
 
             lst = newlst
 
-        except c_worker_exception as e:
-            s = '\n源%s出现worker异常:' % source.source_id
-            print(s, e)
+        # list_callback函数
+        if source.list_callback is not None:
+            local_d = dict()
 
-            i = c_info()
-            i.title = '异常:' + e.title
+            local_d['funcs'] = funcs
+            local_d['infos'] = lst
+
             try:
-                i.url = e.url or str(source.data.get('url', ''))
-            except:
-                pass
-            i.summary = e.summary
-            i.suid = '<exception>'
+                exec(source.list_callback, None, local_d)
+            except Exception as e:
+                print('list_callback代码运行异常:', e)
+                raise c_worker_exception('list_callback代码运行异常', '',
+                                         str(e))
+            lst = local_d['infos']
 
-            lst = [i]
+            if not isinstance(lst, (list, tuple)):
+                raise c_worker_exception('list_callback的返回类型应为list',
+                                         '',
+                                         '实际返回类型:%s' % str(type(lst)))
 
-            is_exception = True
-
-        except Exception as e:
-            print('执行worker时程序异常:', e)
-
-            i = c_info()
-            i.title = '程序出现异常'
-            i.summary = str(e)
-            i.suid = '<exception>'
-
-            lst = [i]
-
-            is_exception = True
-
-        else:
-            is_exception = False
-
-        finally:
-            # 通知执行结束
-            c_message.make(bb_queue,
-                           'bb:source_return',
-                           cfg_token,
-                           source.source_id
-                           )
-
-            if not lst:
-                print('%s获得的列表为空' % source.source_id)
-
-            # 处理内容
             for i in lst:
-                i.source_id = source.source_id
+                if not isinstance(i, c_info):
+                    raise c_worker_exception(
+                        'list_callback返回的列表元素不是一条信息(c_info)',
+                        '',
+                        '实际元素类型:%s' % str(type(i)))
 
-                if not i.title:
-                    i.title = '<title>'
+        # remove duplicate suid, only keep the first one
+        # (escape special suid inside this code)
+        suid_set = set()
+        newlst = list()
+        for one in lst:
+            # escape special suid
+            if one.suid == '<exception>':
+                one.suid = '#<exception>#'
 
-                if not i.author:
-                    i.author = source.name
+            if one.suid not in suid_set:
+                suid_set.add(one.suid)
+                newlst.append(one)
 
-                i.fetch_date = int_time
+        lst = newlst
 
-                if not i.suid:
-                    print(i.source_id, '出现suid为空')
+    except c_worker_exception as e:
+        s = '\n源%s出现worker异常:' % source.source_id
+        print(s, e)
 
-                # length
-                if len(i.title) > runcfg.title_len:
-                    i.title = i.title[:runcfg.title_len - 3] + '...'
+        i = c_info()
+        i.title = '异常:' + e.title
+        try:
+            i.url = e.url or str(source.data.get('url', ''))
+        except:
+            pass
+        i.summary = e.summary
+        i.suid = '<exception>'
 
-                if len(i.summary) > runcfg.summary_len:
-                    i.summary = i.summary[:runcfg.summary_len - 3] + '...'
+        lst = [i]
 
-                if len(i.author) > runcfg.author_len:
-                    i.author = i.author[:runcfg.author_len - 3] + '...'
+        is_exception = True
 
-                if len(i.pub_date) > runcfg.pub_date_len:
-                    i.pub_date = i.pub_date[:runcfg.pub_date_len - 3] + '...'
+    except Exception as e:
+        print('执行worker时程序异常:', e)
 
-                # for tooltip show
-                global for_wz
-                i.summary = for_wz(i.summary)
-                i.pub_date = for_wz(i.pub_date)
+        i = c_info()
+        i.title = '程序出现异常'
+        i.summary = str(e)
+        i.suid = '<exception>'
 
-            if is_exception:
-                c_message.make(back_web_queue,
-                               'bw:exception_info',
-                               cfg_token,
-                               lst)
-            else:
-                fetch_date_str = datetime.datetime.\
-                    fromtimestamp(int_time).\
-                    strftime('%m-%d %H:%M')
-                data = [source.source_id, fetch_date_str, lst]
-                c_message.make(back_web_queue,
-                               'bw:success_infos',
-                               cfg_token,
-                               data)
+        lst = [i]
 
-        # print('线程结束：%s' % source.source_id)
+        is_exception = True
 
+    else:
+        is_exception = False
+
+    finally:
+        # 通知执行结束
+        c_message.make(bb_queue,
+                       'bb:source_return',
+                       cfg_token,
+                       source.source_id
+                       )
+
+        if not lst:
+            print('%s获得的列表为空' % source.source_id)
+
+        # 处理内容
+        for i in lst:
+            i.source_id = source.source_id
+
+            if not i.title:
+                i.title = '<title>'
+
+            if not i.author:
+                i.author = source.name
+
+            i.fetch_date = int_time
+
+            if not i.suid:
+                print(i.source_id, '出现suid为空')
+
+            # length
+            if len(i.title) > runcfg.title_len:
+                i.title = i.title[:runcfg.title_len - 3] + '...'
+
+            if len(i.summary) > runcfg.summary_len:
+                i.summary = i.summary[:runcfg.summary_len - 3] + '...'
+
+            if len(i.author) > runcfg.author_len:
+                i.author = i.author[:runcfg.author_len - 3] + '...'
+
+            if len(i.pub_date) > runcfg.pub_date_len:
+                i.pub_date = i.pub_date[:runcfg.pub_date_len - 3] + '...'
+
+            # for tooltip show
+            global for_wz
+            i.summary = for_wz(i.summary)
+            i.pub_date = for_wz(i.pub_date)
+
+        if is_exception:
+            c_message.make(back_web_queue,
+                           'bw:exception_info',
+                           cfg_token,
+                           lst)
+        else:
+            fetch_date_str = datetime.datetime.\
+                fromtimestamp(int_time).\
+                strftime('%m-%d %H:%M')
+            data = [source.source_id, fetch_date_str, lst]
+            c_message.make(back_web_queue,
+                           'bw:success_infos',
+                           cfg_token,
+                           data)
+
+    # print('线程结束：%s' % source.source_id)
+
+
+# 启动worker线程
+def worker_starter(runcfg, source_id):
     source = bvars.sources[source_id]
 
     try:
