@@ -14,6 +14,7 @@ def for_wz(s):
     # translate for wz_tooltip.js (web tooltip)
     return s.replace('\n', '').replace('\r', '')
 
+
 # for funcs.datetime()
 dt_namedtuple = collections.namedtuple('dt', ('year', 'mon', 'day',
                                               'hour', 'min', 'sec',
@@ -86,6 +87,7 @@ class Functions:
                              t.tm_hour, t.tm_min, t.tm_sec,
                              t.tm_wday + 1, t.tm_yday, t.tm_isdst)
 
+
 funcs = Functions()
 
 
@@ -116,9 +118,9 @@ def worker_starter(runcfg, source_id):
         # print('线程开始：%s' % source.source_id)
 
         int_time = int(time.time())
-        is_exception = False
 
         try:
+            # 信息源定义异常
             if worker is None:
                 s = '信息源%s没有找到指定worker: %s' % \
                     (source.source_id, source.worker_id)
@@ -130,7 +132,94 @@ def worker_starter(runcfg, source_id):
                 print(s)
                 raise c_worker_exception(s)
 
+            if type(source.callback) is str:
+                s = '信息源%s的callback代码编译失败' % source.source_id
+                print(s)
+                raise c_worker_exception('编译callback代码失败', '',
+                                         source.callback)
+
+            if type(source.list_callback) is str:
+                s = '信息源%s的list_callback代码编译失败' % source.source_id
+                print(s)
+                raise c_worker_exception('编译list_callback代码失败', '',
+                                         source.list_callback)
+
+            # run worker
             lst = worker(source.data, worker_dict)
+
+            # max length of info list
+            if source.max_len is not None:
+                if len(lst) > source.max_len:
+                    lst = lst[:source.max_len]
+            elif len(lst) > runcfg.max_entries:
+                lst = lst[:runcfg.max_entries]
+
+            global funcs
+            # callback函数
+            if source.callback is not None:
+                newlst = list()
+                local_d = dict()
+
+                local_d['funcs'] = funcs
+                local_d['hasher'] = funcs.hasher
+                local_d['unixtime'] = funcs.unixtime
+
+                for i, info in enumerate(lst):
+                    local_d['posi'] = i
+                    local_d['info'] = info
+                    try:
+                        exec(source.callback, None, local_d)
+                    except Exception as e:
+                        print('callback代码运行异常:', e)
+                        raise c_worker_exception('callback代码运行异常', '',
+                                                 str(e))
+
+                    if info.temp != 'del':
+                        newlst.append(info)
+
+                lst = newlst
+
+            # list_callback函数
+            if source.list_callback is not None:
+                local_d = dict()
+
+                local_d['funcs'] = funcs
+                local_d['infos'] = lst
+
+                try:
+                    exec(source.list_callback, None, local_d)
+                except Exception as e:
+                    print('list_callback代码运行异常:', e)
+                    raise c_worker_exception('list_callback代码运行异常', '',
+                                             str(e))
+                lst = local_d['infos']
+
+                if not isinstance(lst, (list, tuple)):
+                    raise c_worker_exception('list_callback的返回类型应为list',
+                                             '',
+                                             '实际返回类型:%s' % str(type(lst)))
+
+                for i in lst:
+                    if not isinstance(i, c_info):
+                        raise c_worker_exception(
+                            'list_callback返回的列表元素不是一条信息(c_info)',
+                            '',
+                            '实际元素类型:%s' % str(type(i)))
+
+            # remove duplicate suid, only keep the first one
+            # (escape special suid inside this code)
+            suid_set = set()
+            newlst = list()
+            for one in lst:
+                # escape special suid
+                if one.suid == '<exception>':
+                    one.suid = '#<exception>#'
+
+                if one.suid not in suid_set:
+                    suid_set.add(one.suid)
+                    newlst.append(one)
+
+            lst = newlst
 
         except c_worker_exception as e:
             s = '\n源%s出现worker异常:' % source.source_id
@@ -162,83 +251,7 @@ def worker_starter(runcfg, source_id):
             is_exception = True
 
         else:
-            # max length of info list
-            if source.max_len is not None:
-                if len(lst) > source.max_len:
-                    lst = lst[:source.max_len]
-            elif len(lst) > runcfg.max_entries:
-                lst = lst[:runcfg.max_entries]
-
-            global funcs
-            # callback函数
-            if source.callback is not None:
-                newlst = list()
-                local_d = dict()
-
-                local_d['funcs'] = funcs
-                local_d['hasher'] = funcs.hasher
-                local_d['unixtime'] = funcs.unixtime
-
-                for i, info in enumerate(lst):
-                    local_d['posi'] = i
-                    local_d['info'] = info
-                    try:
-                        exec(source.callback, None, local_d)
-                    except Exception as e:
-                        print('callback异常:', e)
-                        info.title = 'callback代码异常'
-                        info.summary = str(e)
-
-                    if info.temp != 'del':
-                        newlst.append(info)
-
-                lst = newlst
-
-            # list_callback函数
-            if source.list_callback is not None:
-                local_d = dict()
-
-                local_d['funcs'] = funcs
-                local_d['infos'] = lst
-
-                try:
-                    exec(source.list_callback, None, local_d)
-                    lst = local_d['infos']
-
-                    if not isinstance(lst, (list, tuple)):
-                        raise Exception('infos的类型应为list')
-
-                    for i in lst:
-                        if not isinstance(i, c_info):
-                            raise Exception('列表的元素不是一条信息(c_info)')
-                except Exception as e:
-                    print('list_callback异常:', e)
-
-                    i = c_info()
-                    i.title = 'list_callback出现异常'
-                    i.summary = str(e)
-                    i.suid = '<exception>'
-
-                    lst = [i]
-
-                    is_exception = True
-
-            # if not a list_callback exception
-            if not is_exception:
-                # remove duplicate suid, only keep the first one
-                # (escape special suid inside this code)
-                suid_set = set()
-                newlst = list()
-                for one in lst:
-                    # escape special suid
-                    if one.suid == '<exception>':
-                        one.suid = '#<exception>#'
-
-                    if one.suid not in suid_set:
-                        suid_set.add(one.suid)
-                        newlst.append(one)
-
-                lst = newlst
+            is_exception = False
 
         finally:
             # 通知执行结束
@@ -469,6 +482,7 @@ def parse_data(worker_id, xml_string):
 
 
 def worker(worker_id):
+
     def worker_decorator(func):
         if worker_id not in bvars.workers:
             bvars.workers[worker_id] = (func, dict())
@@ -487,6 +501,7 @@ def worker(worker_id):
 
 
 def dataparser(worker_id):
+
     def dataparser_decorator(func):
         if worker_id not in bvars.dataparsers:
             bvars.dataparsers[worker_id] = func

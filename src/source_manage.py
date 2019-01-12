@@ -124,13 +124,17 @@ def load_xml(sources_path, path, filename, test_sid):
     if callback != '':
         try:
             s.callback = compile(callback, '<string>', 'exec')
-        except:
+        except Exception as e:
             print('编译信息源%s的callback代码失败' % s.source_id)
-            raise
+            s.callback = str(e)
 
     list_callback = get_text_from_tag(xml.find('list_callback'))
     if list_callback != '':
-        s.list_callback = compile(list_callback, '<string>', 'exec')
+        try:
+            s.list_callback = compile(list_callback, '<string>', 'exec')
+        except Exception as e:
+            print('编译信息源%s的list_callback代码失败' % s.source_id)
+            s.list_callback = str(e)
 
     def common_procedure(s, string):
         if s.worker_id == '':
