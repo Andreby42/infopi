@@ -7,7 +7,7 @@ try:
     if vt < (2, 4, 105):
         print('regex版本较低:%s, 使用内置re' % re.__version__)
         raise Exception('regex version is low')
-    re.DEFAULT_VERSION = re.VERSION1
+    re.DEFAULT_VERSION = re.VERSION0
 except:
     import re
 
