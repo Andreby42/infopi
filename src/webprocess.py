@@ -1106,6 +1106,14 @@ def run_web(web_port, certfile, keyfile, tmpfs_path,
 
     c_message.make(web_back_queue, 'wb:request_load')
 
+    # tornado不支持Windows上的ProactorEventLoop
+    # Python 3.8在Windows上默认使用ProactorEventLoop
+    # 手动使用SelectorEventLoop
+    if os.name == 'nt':
+        import asyncio
+        asyncio.DefaultEventLoopPolicy = \
+            asyncio.WindowsSelectorEventLoopPolicy
+
     # tornado
     from tornado.wsgi import WSGIContainer
     from tornado.httpserver import HTTPServer
